@@ -1,0 +1,101 @@
+---
+title: "Peer Assessment 1"
+author: "Ashay"
+output: html_document
+---
+## Loading and preprocessing the data
+
+```{r load-data, echo=TRUE}
+data <- read.csv("activity.csv")
+head(data)
+```
+```{r preprocess, echo=TRUE}
+data$date <- as.Date(data$date)
+str(data)
+```
+## What is mean total number of steps taken per day?
+
+```{r total-steps-per-day, echo=TRUE}
+steps_per_day <- aggregate(steps ~ date, data = data, FUN = sum, na.rm = TRUE)
+
+hist(steps_per_day$steps,
+     main = "Total Steps per Day",
+     xlab = "Total steps",
+     breaks = 20)
+
+mean_steps <- mean(steps_per_day$steps)
+median_steps <- median(steps_per_day$steps)
+
+mean_steps
+median_steps
+```
+## What is the average daily activity pattern?
+
+```{r average-daily-pattern, echo=TRUE}
+avg_interval <- aggregate(steps ~ interval, data = data, FUN = mean, na.rm = TRUE)
+
+plot(avg_interval$interval,
+     avg_interval$steps,
+     type = "l",
+     xlab = "5-minute Interval",
+     ylab = "Average Number of Steps")
+
+max_interval <- avg_interval$interval[which.max(avg_interval$steps)]
+max_interval
+```
+## Imputing missing values
+
+```{r count-missing, echo=TRUE}
+total_missing <- sum(is.na(data$steps))
+total_missing
+```
+```{r impute-missing, echo=TRUE}
+# Create a copy of dataset
+data_imputed <- data
+
+# Compute mean per interval
+interval_means <- aggregate(steps ~ interval, data = data, FUN = mean, na.rm = TRUE)
+
+# Replace NA with interval mean
+for(i in 1:nrow(data_imputed)) {
+  if(is.na(data_imputed$steps[i])) {
+    interval_value <- data_imputed$interval[i]
+    data_imputed$steps[i] <- interval_means$steps[interval_means$interval == interval_value]
+  }
+}
+
+sum(is.na(data_imputed$steps))
+```
+```{r total-after-imputation, echo=TRUE}
+steps_per_day_imputed <- aggregate(steps ~ date, data = data_imputed, FUN = sum)
+
+hist(steps_per_day_imputed$steps,
+     main = "Total Steps per Day (After Imputation)",
+     xlab = "Total steps",
+     breaks = 20)
+
+mean_imputed <- mean(steps_per_day_imputed$steps)
+median_imputed <- median(steps_per_day_imputed$steps)
+
+mean_imputed
+median_imputed
+```
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r weekday-weekend, echo=TRUE}
+data_imputed$day_type <- ifelse(weekdays(data_imputed$date) %in% c("Saturday", "Sunday"),
+                                "weekend", "weekday")
+
+avg_day_type <- aggregate(steps ~ interval + day_type,
+                          data = data_imputed,
+                          FUN = mean)
+
+library(lattice)
+
+xyplot(steps ~ interval | day_type,
+       data = avg_day_type,
+       type = "l",
+       layout = c(1, 2),
+       xlab = "Interval",
+       ylab = "Average Steps")
+```
